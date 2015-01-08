@@ -1,5 +1,9 @@
 # Distortions
->Image distortion tool. Implementation of some image ditortion teniques
+![example]( https://raw.githubusercontent.com/ChienliMa/Distortions/master/imgs/result.jpg )
+>  Image distortion tool. Implementation of some image ditortion teniques
+
+
+
 
 
 
