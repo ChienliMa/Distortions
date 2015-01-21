@@ -304,9 +304,9 @@ def scratch( src, complex = 0.7 ):
     else:
         return np.maximum( (scratch*255).astype('uint8'), src )
 
-def blur( src, complex = 0.7 ):
+def blur( src, complex = 0.5 ):
     theta = np.random.uniform( 0, 360 )
-    length = np.random.uniform( 1, 1+( 2 * complex )** 2)*(src.shape[1]/28.0)
+    length = np.random.uniform( 1, 1+( 2 * complex )**2*src.shape[0]/28.0 )
     filter = get_linear_motion_blur_filter( length, theta )
     return cv2.filter2D( src, -1, filter) 
     
@@ -319,50 +319,51 @@ def get_linear_motion_blur_filter( length, theta ):
         return np.array([1])
     
     # special angle
+    length = int( np.ceil( length ) )
+    kernel = np.zeros( [length*2+1, length*2+1] )
     if theta == 0:
-        length = np.ceil( length )
-        kernel = np.zeros( [length*2-1, length*2-1] )
-        kernel[length, length: ] = 1./length
+        kernel[ length, length:-2 ] = 1.0/length
     elif theta == 90:            
-        length = np.ceil( length )
-        kernel = np.zeros( [length*2-1, length*2-1] )
-        kernel[ :length, length ] = 1./length
+        kernel[ 1:length, length ] = 1.0/length
     elif theta == 180:
-        length = np.ceil( length )
-        kernel = np.zeros( [length*2-1, length*2-1] )
-        kernel[ length, :length ] = 1./length
+        kernel[ length, 1:length ] = 1.0/length
     elif theta == 270:
-        length = np.ceil( length )
-        kernel = np.zeros( [length*2-1, length*2-1] )
-        kernel[ length:, length ] = 1./length
+        kernel[ length:-2, length ] = 1.0/length
     else:
         # common angle        
         x_length = np.cos( theta ) * length 
         y_length = np.sin( theta ) * length
-        half_kernel_size =  np.ceil( max( abs(x_length), abs(y_length) ) ) 
-        half_kernel_size = int(half_kernel_size)
-        kernel_size = half_kernel_size * 2 + 1
-        kernel = np.zeros( [kernel_size, kernel_size] )
         
         if abs(x_length) >= abs(y_length):
             direc = x_length/abs(x_length)
-            for i in xrange( half_kernel_size ):
-                x_i = half_kernel_size + i* direc
-                y_i = half_kernel_size + np.tan(theta) * i * direc 
+            for i in xrange( length ):
+                x_i = i* direc
+                y_i = np.tan(theta) * x_i
+                if x_i**2 + y_i**2 > length**2:
+                    break 
+
+                x_i += length
+                y_i += length
                 y_top = np.ceil( y_i )
                 y_buttom = np.floor( y_i )
                 kernel[x_i, y_top] = 1./length * ( y_top - y_i )
                 kernel[x_i, y_buttom] = 1./length * ( y_i - y_buttom )                    
         else:
             direc = y_length/abs(y_length)
-            for i in xrange( half_kernel_size ):
-                y_i = half_kernel_size + i* direc
-                x_i = half_kernel_size + i * direc / np.tan(theta)  
+            for i in xrange( length ):
+                y_i = i* direc
+                x_i = y_i / np.tan(theta) 
+                if x_i**2 + y_i**2 > length**2:
+                    break  
+
+                x_i += length
+                y_i += length
                 x_right = np.ceil( x_i )
                 x_left = np.floor( x_i )
                 kernel[ x_right , y_i ] = 1./length * ( x_right - x_i )
                 kernel[ x_left, y_i ] = 1./length * ( x_i - x_left ) 
-        kernel[half_kernel_size,half_kernel_size] = 1./length
+
+        kernel[length,length] = 1./length
     return abs(kernel)
 
 # not recommended for color images
